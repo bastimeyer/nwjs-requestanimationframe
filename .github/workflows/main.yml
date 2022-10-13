@@ -1,0 +1,59 @@
+name: Run
+
+on:
+  - push
+
+jobs:
+  run:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        nwjs:
+          - v0.67.1
+          - v0.68.1
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: install homebrew
+        if: matrix.os == 'macos-latest'
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew update
+          brew install bash
+          echo "/usr/local/bin" >> $GITHUB_PATH
+      - name: download nwjs
+        shell: bash
+        run: |
+          declare -A urls=(
+            [ubuntu-latest]="https://dl.nwjs.io/${{ matrix.nwjs }}/nwjs-${{ matrix.nwjs }}-linux-x64.tar.gz"
+            [macos-latest]="https://dl.nwjs.io/${{ matrix.nwjs }}/nwjs-${{ matrix.nwjs }}-osx-x64.zip"
+            [windows-latest]="https://dl.nwjs.io/${{ matrix.nwjs }}/nwjs-${{ matrix.nwjs }}-win-x64.zip"
+          )
+          curl -SLo download "${urls[${{ matrix.os }}]}"
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              tar -xzvf download
+              ;;
+            *)
+              unzip download
+              ;;
+          esac
+          rm download
+      - name: run app
+        shell: bash
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              xvfb-run --auto-servernum ./nwjs-${{ matrix.nwjs }}-linux-x64/nw .
+              ;;
+            macos-latest)
+              ./nwjs-${{ matrix.nwjs }}-osx-x64/nwjs.app/Contents/MacOS/nwjs .
+              ;;
+            windows-latest)
+              ./nwjs-${{ matrix.nwjs }}-win-x64/nw.exe .
+              ;;
+          esac

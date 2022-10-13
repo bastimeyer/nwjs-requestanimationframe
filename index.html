@@ -1,0 +1,56 @@
+<!doctype html>
+<script>
+(async function() {
+
+const stderr = require("process").stderr;
+const promisify = require("util").promisify;
+const _print = promisify(stderr.write.bind(stderr));
+const print = msg => _print(`${msg}\n`);
+
+const nw = require("nw.gui");
+const nwWindow = nw.Window.get();
+
+const raf = async (expectFail = false) => print(await new Promise(r => {
+	requestAnimationFrame(
+		() => expectFail
+			? r("success (expected failure)")
+			: r("success")
+	);
+	setTimeout(
+		() => expectFail
+			? r("failure (expected)")
+			: r("failure"),
+		200
+	);
+}));
+
+await print("");
+await print("initial window state (hidden)...");
+
+for ( let i = 0; i < 3; i++ ) {
+	await print("requesting animation frame with initially hidden window...");
+	await raf();
+}
+
+await print("");
+await print("showing window...");
+nwWindow.show();
+
+for ( let i = 0; i < 3; i++ ) {
+	await print("requesting animation frame with shown window...");
+	await raf();
+}
+
+await print("");
+await print("hiding window again...");
+nwWindow.hide();
+
+await print("requesting animation frame with hidden window...");
+await raf(true);
+
+await print("");
+await print("exiting...");
+nw.App.quit();
+
+})();
+</script>
